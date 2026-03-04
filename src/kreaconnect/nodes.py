@@ -3,6 +3,9 @@ import torch
 import requests
 import os
 import time
+import numpy as np
+from PIL import Image
+import io
 
 
 class Example:
@@ -111,28 +114,19 @@ class Example:
     #def IS_CHANGED(s, image, string_field, int_field, float_field, print_to_screen):
     #    return ""
 
-class ImageSelector:
-    CATEGORY = "example"
-    @classmethod    
-    def INPUT_TYPES(s):
-        return { "required":  { "images": ("IMAGE",), } }
-    RETURN_TYPES = ("IMAGE",)
-    FUNCTION = "choose_image"
-
-    def choose_image(self, images):
-        brightness = list(torch.mean(image.flatten()).item() for image in images)
-        brightest = brightness.index(max(brightness))
-        result = images[brightest].unsqueeze(0)
-        return (result,)
-
 #Krea Node 
 class KreaNode: 
     CATEGORY = "Krea Node"
     @classmethod
     def INPUT_TYPES(s):
-        return { "required":  { "images": ("IMAGE",), } }
+        return { "required":  { "prompt": ("STRING",{
+            "multiline": True,
+            "default": "Your prompt here."
+        }), }, 
+            "optional": {"image_1": ("IMAGE",), "image_2": ("IMAGE",)} }
     RETURN_TYPES = ("IMAGE",)
-    FUNCTION = "choose_image"
+    FUNCTION = "run"
+    OUTPUT_NODE = True
 
     def setKey(self):
         self.api_key = os.getenv("KREA_API_KEY")
@@ -145,11 +139,12 @@ class KreaNode:
         print("PRINTING response.text from sendrequest!!!")
         print(response.text)
     
-    def requestNanoBanana(self):
+    def requestNanoBanana(self, prompt):
         url = "https://api.krea.ai/generate/image/google/nano-banana"
         payload = {
-            "prompt": "A person",
-            "aspectRatio": "16:9"
+            "prompt": prompt,
+            "aspectRatio": "16:9",
+            "imageUrls": [self.image_url]
         }
         headers = {
             "Authorization": "Bearer " + self.api_key,
@@ -181,30 +176,73 @@ class KreaNode:
 
             response = requests.get(url, headers=headers)
 
-            status = response.json()["status"]
+            data = response.json()
+            status = data["status"]
 
             if status == "completed":
                 print("JOB COMPLETED!!")
                 print(response.text)
+                print("printing data")
+                print(data)
+                self.result_url = data["result"]["urls"][0]
                 break
             
             #runs every 2 seconds
             time.sleep(2)
+    
+    def tensor_to_bytes(self, image_tensor):
+        # Take first image from batch, convert to uint8
+        img_np = (image_tensor[0].numpy() * 255).astype(np.uint8)
+        pil_image = Image.fromarray(img_np)
         
+        buf = io.BytesIO()
+        pil_image.save(buf, format="PNG")
+        buf.seek(0)
+        print(buf)
+        return buf
+    
+    def url_to_tensor(self, image_url):
+        # Download the image
+        response = requests.get(image_url)
+        response.raise_for_status()
+        
+        # Convert to PIL, then numpy, then tensor
+        pil_image = Image.open(io.BytesIO(response.content)).convert("RGB")
+        img_np = np.array(pil_image).astype(np.float32) / 255.0
+        tensor = torch.from_numpy(img_np).unsqueeze(0)  # add batch dimension
+        
+        return tensor
 
-    def choose_image(self, images):
-        brightness = list(torch.mean(image.flatten()).item() for image in images)
-        brightest = brightness.index(max(brightness))
-        result = images[brightest].unsqueeze(0)
+    def upload_to_krea(self, image_1):
+        img_bytes = self.tensor_to_bytes(image_1)
+
+        url = "https://api.krea.ai/assets"
+
+        files = { "file": ("input_image.png", img_bytes, "image/png") }
+        payload = { "description": "<string>" }
+        headers = {"Authorization": "Bearer " + self.api_key}
+
+        response = requests.post(url, data=payload, files=files, headers=headers)
+
+        #fix this for multi images
+        self.image_url = response.json()["image_url"]
+        # print(response.text)
+
+    def run(self, prompt, image_1=None, image_2=None):
 
         #the api call test
+        print("printing image_1")
+        print(image_1)
         self.setKey()
+        self.upload_to_krea(image_1)
+        self.requestNanoBanana(prompt)
         # self.checkJob()
+        # self.tensor_to_bytes(image_1)
         # self.sendRequest()
-        self.requestNanoBanana()
 
         # return
-        return (result,)
+        img_tensor = self.url_to_tensor(self.result_url)
+        return (img_tensor,)
 
 
 
@@ -212,14 +250,12 @@ class KreaNode:
 # NOTE: names should be globally unique
 NODE_CLASS_MAPPINGS = {
     "Example": Example,
-    "Image Selector" : ImageSelector,
     "Krea Node": KreaNode,
 }
 
 # A dictionary that contains the friendly/humanly readable titles for the nodes
 NODE_DISPLAY_NAME_MAPPINGS = {
     "Example": "Example Node",
-    "Image Selector": "Image Selector",
     "Krea Node": "Krea Node",
 
 }
