@@ -126,7 +126,7 @@ class KreaNode:
             "optional": {"image_1": ("IMAGE",), "image_2": ("IMAGE",)} }
     RETURN_TYPES = ("IMAGE",)
     FUNCTION = "run"
-    OUTPUT_NODE = True
+    # OUTPUT_NODE = True
 
     def setKey(self):
         self.api_key = os.getenv("KREA_API_KEY")
