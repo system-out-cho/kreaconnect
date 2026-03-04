@@ -1,5 +1,9 @@
 from inspect import cleandoc
 import torch
+import requests
+import os
+import time
+
 
 class Example:
     """
@@ -130,12 +134,76 @@ class KreaNode:
     RETURN_TYPES = ("IMAGE",)
     FUNCTION = "choose_image"
 
+    def setKey(self):
+        self.api_key = os.getenv("KREA_API_KEY")
+    
+    def sendRequest(self):
+        # url = "https://api.krea.ai/jobs?limit=100&status=queued"
+        url = "https://api.krea.ai/jobs?limit=100"
+        headers = {"Authorization": "Bearer " + self.api_key}
+        response = requests.get(url, headers=headers)
+        print("PRINTING response.text from sendrequest!!!")
+        print(response.text)
+    
+    def requestNanoBanana(self):
+        url = "https://api.krea.ai/generate/image/google/nano-banana"
+        payload = {
+            "prompt": "A person",
+            "aspectRatio": "16:9"
+        }
+        headers = {
+            "Authorization": "Bearer " + self.api_key,
+            "Content-Type": "application/json"
+        }
+        print("SENDING REQUEST")
+        response = requests.post(url, json=payload, headers=headers)
+        print("STORING REQUEST")
+        data = response.json()
+        print("PARSING REQUEST")
+        self.job_id = data["job_id"]
+        print("PRINTING JOB_ID from requestNano")
+        print(self.job_id)
+        #start checking the job
+        self.checkJob()
+
+    def checkJob(self):
+        print("beginning of check job function")
+        start_time = time.time()
+        timeout = 60  # 1 minute
+        headers = {"Authorization": "Bearer " + self.api_key}
+        url = f"https://api.krea.ai/jobs/{self.job_id}"
+
+        while True:
+            print("still checking job")
+
+            if time.time() - start_time >= timeout:
+                raise TimeoutError("Krea job timed out")
+
+            response = requests.get(url, headers=headers)
+
+            status = response.json()["status"]
+
+            if status == "completed":
+                print("JOB COMPLETED!!")
+                print(response.text)
+                break
+            
+            time.sleep(2)
+        
+
     def choose_image(self, images):
         brightness = list(torch.mean(image.flatten()).item() for image in images)
         brightest = brightness.index(max(brightness))
         result = images[brightest].unsqueeze(0)
-        return (result,)
+        
+        #the api call test
+        self.setKey()
+        # self.checkJob()
+        # self.sendRequest()
+        self.requestNanoBanana()
 
+        # return
+        return (result,)
 
 
 
@@ -145,7 +213,6 @@ NODE_CLASS_MAPPINGS = {
     "Example": Example,
     "Image Selector" : ImageSelector,
     "Krea Node": KreaNode,
-
 }
 
 # A dictionary that contains the friendly/humanly readable titles for the nodes
