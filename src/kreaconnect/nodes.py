@@ -188,6 +188,7 @@ class KreaNode:
                 print(response.text)
                 break
             
+            #runs every 2 seconds
             time.sleep(2)
         
 
@@ -195,7 +196,7 @@ class KreaNode:
         brightness = list(torch.mean(image.flatten()).item() for image in images)
         brightest = brightness.index(max(brightness))
         result = images[brightest].unsqueeze(0)
-        
+
         #the api call test
         self.setKey()
         # self.checkJob()
