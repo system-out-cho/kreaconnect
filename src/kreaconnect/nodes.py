@@ -115,11 +115,28 @@ class ImageSelector:
     RETURN_TYPES = ("IMAGE",)
     FUNCTION = "choose_image"
 
-def choose_image(self, images):
-    brightness = list(torch.mean(image.flatten()).item() for image in images)
-    brightest = brightness.index(max(brightness))
-    result = images[brightest].unsqueeze(0)
-    return (result,)
+    def choose_image(self, images):
+        brightness = list(torch.mean(image.flatten()).item() for image in images)
+        brightest = brightness.index(max(brightness))
+        result = images[brightest].unsqueeze(0)
+        return (result,)
+
+#Krea Node 
+class KreaNode: 
+    CATEGORY = "Krea Node"
+    @classmethod
+    def INPUT_TYPES(s):
+        return { "required":  { "images": ("IMAGE",), } }
+    RETURN_TYPES = ("IMAGE",)
+    FUNCTION = "choose_image"
+
+    def choose_image(self, images):
+        brightness = list(torch.mean(image.flatten()).item() for image in images)
+        brightest = brightness.index(max(brightness))
+        result = images[brightest].unsqueeze(0)
+        return (result,)
+
+
 
 
 # A dictionary that contains all nodes you want to export with their names
@@ -127,6 +144,7 @@ def choose_image(self, images):
 NODE_CLASS_MAPPINGS = {
     "Example": Example,
     "Image Selector" : ImageSelector,
+    "Krea Node": KreaNode,
 
 }
 
@@ -134,6 +152,7 @@ NODE_CLASS_MAPPINGS = {
 NODE_DISPLAY_NAME_MAPPINGS = {
     "Example": "Example Node",
     "Image Selector": "Image Selector",
+    "Krea Node": "Krea Node",
 
 }
 
