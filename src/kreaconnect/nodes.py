@@ -1,11 +1,5 @@
 from inspect import cleandoc
-import torch
 import requests
-import os
-import time
-import numpy as np
-from PIL import Image
-import io
 
 from . import utils
 
