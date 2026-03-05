@@ -7,6 +7,8 @@ import numpy as np
 from PIL import Image
 import io
 
+from . import utils
+
 
 class Example:
     """
@@ -127,21 +129,6 @@ class KreaNode:
     RETURN_TYPES = ("IMAGE",)
     FUNCTION = "run"
     # OUTPUT_NODE = True
-
-    @classmethod
-    def IS_CHANGED(cls, **kwargs):
-        return float("nan")  # always re-evaluate
-
-    def setKey(self):
-        self.api_key = os.getenv("KREA_API_KEY")
-    
-    def sendRequest(self):
-        # url = "https://api.krea.ai/jobs?limit=100&status=queued"
-        url = "https://api.krea.ai/jobs?limit=100"
-        headers = {"Authorization": "Bearer " + self.api_key}
-        response = requests.get(url, headers=headers)
-        print("PRINTING response.text from sendrequest!!!")
-        print(response.text)
     
     def requestModel(self, prompt, img_url_arr):
         styleImages = []
@@ -166,96 +153,26 @@ class KreaNode:
         print("STORING REQUEST")
         data = response.json()
         print("PARSING REQUEST")
-        self.job_id = data["job_id"]
+        job_id = data["job_id"]
         print("PRINTING JOB_ID from requestNano")
-        print(self.job_id)
-        #start checking the job
-        self.checkJob()
-
-    def checkJob(self):
-        print("beginning of check job function")
-        start_time = time.time()
-        timeout = 60  # 1 minute
-        headers = {"Authorization": "Bearer " + self.api_key}
-        url = f"https://api.krea.ai/jobs/{self.job_id}"
-
-        while True:
-            print("still checking job")
-
-            if time.time() - start_time >= timeout:
-                raise TimeoutError("Krea job timed out")
-
-            response = requests.get(url, headers=headers)
-
-            data = response.json()
-            status = data["status"]
-
-            if status == "completed":
-                print("JOB COMPLETED!!")
-                print(response.text)
-                print("printing data")
-                print(data)
-                self.result_url = data["result"]["urls"][0]
-                break
-            
-            #runs every 2 seconds
-            time.sleep(2)
-    
-    def tensor_to_bytes(self, image_tensor):
-        # Take first image from batch, convert to uint8
-        img_np = (image_tensor[0].numpy() * 255).astype(np.uint8)
-        pil_image = Image.fromarray(img_np)
-        
-        buf = io.BytesIO()
-        pil_image.save(buf, format="PNG")
-        buf.seek(0)
-        print(buf)
-        return buf
-    
-    def url_to_tensor(self, image_url):
-        # Download the image
-        response = requests.get(image_url)
-        response.raise_for_status()
-        
-        # Convert to PIL, then numpy, then tensor
-        pil_image = Image.open(io.BytesIO(response.content)).convert("RGB")
-        img_np = np.array(pil_image).astype(np.float32) / 255.0
-        tensor = torch.from_numpy(img_np).unsqueeze(0)  # add batch dimension
-        
-        return tensor
-
-    def upload_to_krea(self, image_1):
-        img_bytes = self.tensor_to_bytes(image_1)
-
-        url = "https://api.krea.ai/assets"
-
-        files = { "file": ("input_image.png", img_bytes, "image/png") }
-        payload = { "description": "<string>" }
-        headers = {"Authorization": "Bearer " + self.api_key}
-
-        response = requests.post(url, data=payload, files=files, headers=headers)
-
-        #fix this for multi images
-        return response.json()["image_url"]
+        print(job_id)
+        self.result_url = utils.checkJob(job_id)
 
     def run(self, prompt, image_1=None, image_2=None, image_3=None):
 
-        self.setKey()
+        self.api_key = utils.setKey()
         image_arr = [image_1, image_2, image_3]
         img_url_arr = []
 
         for img in image_arr:
             if img != None:
-                img_url = self.upload_to_krea(img)
+                img_url = utils.upload_to_krea(img)
                 img_url_arr.append(img_url)
         
         self.requestModel(prompt, img_url_arr)
-        # self.checkJob()
-        # self.tensor_to_bytes(image_1)
-        # self.sendRequest()
 
-        # return
-        img_tensor = self.url_to_tensor(self.result_url)
+        img_tensor = utils.url_to_tensor(self.result_url)
+
         return (img_tensor,)
 
 
