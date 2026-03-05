@@ -9,11 +9,16 @@ import io
 
 api_key = ""
 
+# max_time for generation to run before time out
+max_time = 60
+
+#function that sets the API key from env
 def setKey():
     global api_key
     api_key = os.getenv("KREA_API_KEY")
     return api_key
 
+# test function that sends request for all jobs
 def sendRequest():
     # url = "https://api.krea.ai/jobs?limit=100&status=queued"
     url = "https://api.krea.ai/jobs?limit=100"
@@ -22,6 +27,7 @@ def sendRequest():
     print("PRINTING response.text from sendrequest!!!")
     print(response.text)
 
+# converts an image tensor into bytes
 def tensor_to_bytes(image_tensor):
     # Take first image from batch, convert to uint8
     img_np = (image_tensor[0].numpy() * 255).astype(np.uint8)
@@ -33,17 +39,7 @@ def tensor_to_bytes(image_tensor):
     print(buf)
     return buf
 
-def tensor_to_bytes(image_tensor):
-    # Take first image from batch, convert to uint8
-    img_np = (image_tensor[0].numpy() * 255).astype(np.uint8)
-    pil_image = Image.fromarray(img_np)
-    
-    buf = io.BytesIO()
-    pil_image.save(buf, format="PNG")
-    buf.seek(0)
-    print(buf)
-    return buf
-
+# converts url to tensor 
 def url_to_tensor(image_url):
     # Download the image
     response = requests.get(image_url)
@@ -56,10 +52,12 @@ def url_to_tensor(image_url):
     
     return tensor
 
+# function that takes in job_id and checks if it is completed every 2s
+# times out after max_time
 def checkJob(job_id):
     print("beginning of check job function")
     start_time = time.time()
-    timeout = 60  # 1 minute
+    timeout = max_time  # 1 minute
     headers = {"Authorization": "Bearer " + api_key}
     url = f"https://api.krea.ai/jobs/{job_id}"
 
@@ -80,11 +78,11 @@ def checkJob(job_id):
             print("printing data")
             print(data)
             return data["result"]["urls"][0]
-            # break
         
         #runs every 2 seconds
         time.sleep(2)
 
+# uploads image asset to Krea to be used for generation
 def upload_to_krea(image):    
     img_bytes = tensor_to_bytes(image)
 
