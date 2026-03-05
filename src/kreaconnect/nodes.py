@@ -123,10 +123,14 @@ class KreaNode:
             "multiline": True,
             "default": "Your prompt here."
         }), }, 
-            "optional": {"image_1": ("IMAGE",), "image_2": ("IMAGE",)} }
+            "optional": {"image_1": ("IMAGE",), "image_2": ("IMAGE",), "image_3": ("IMAGE", )} }
     RETURN_TYPES = ("IMAGE",)
     FUNCTION = "run"
     # OUTPUT_NODE = True
+
+    @classmethod
+    def IS_CHANGED(cls, **kwargs):
+        return float("nan")  # always re-evaluate
 
     def setKey(self):
         self.api_key = os.getenv("KREA_API_KEY")
@@ -139,12 +143,18 @@ class KreaNode:
         print("PRINTING response.text from sendrequest!!!")
         print(response.text)
     
-    def requestNanoBanana(self, prompt):
-        url = "https://api.krea.ai/generate/image/google/nano-banana"
+    def requestModel(self, prompt, img_url_arr):
+        styleImages = []
+        for img_url in img_url_arr:
+            obj = {"strength": 1, "url": img_url}
+            styleImages.append(obj)
+
+        url = "https://api.krea.ai/generate/image/bytedance/seedream-4"
         payload = {
             "prompt": prompt,
-            "aspectRatio": "16:9",
-            "imageUrls": [self.image_url]
+            "styleImages": styleImages,
+            "width": 828,
+            "height": 428
         }
         headers = {
             "Authorization": "Bearer " + self.api_key,
@@ -152,6 +162,7 @@ class KreaNode:
         }
         print("SENDING REQUEST")
         response = requests.post(url, json=payload, headers=headers)
+        print(response.text)
         print("STORING REQUEST")
         data = response.json()
         print("PARSING REQUEST")
@@ -225,17 +236,20 @@ class KreaNode:
         response = requests.post(url, data=payload, files=files, headers=headers)
 
         #fix this for multi images
-        self.image_url = response.json()["image_url"]
-        # print(response.text)
+        return response.json()["image_url"]
 
-    def run(self, prompt, image_1=None, image_2=None):
+    def run(self, prompt, image_1=None, image_2=None, image_3=None):
 
-        #the api call test
-        print("printing image_1")
-        print(image_1)
         self.setKey()
-        self.upload_to_krea(image_1)
-        self.requestNanoBanana(prompt)
+        image_arr = [image_1, image_2, image_3]
+        img_url_arr = []
+
+        for img in image_arr:
+            if img != None:
+                img_url = self.upload_to_krea(img)
+                img_url_arr.append(img_url)
+        
+        self.requestModel(prompt, img_url_arr)
         # self.checkJob()
         # self.tensor_to_bytes(image_1)
         # self.sendRequest()
@@ -260,3 +274,8 @@ NODE_DISPLAY_NAME_MAPPINGS = {
 
 }
 
+#stuff to fix:
+# - optional prompt 
+# - multiple images 
+# - multiple models 
+# - 4 + image inputs dynamically created
