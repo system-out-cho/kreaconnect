@@ -12,7 +12,7 @@ api_key = ""
 # max_time for generation to run before time out
 max_time = 60
 
-#function that sets the API key from env
+# function that sets the API key from env
 def setKey():
     global api_key
     api_key = os.getenv("KREA_API_KEY")
@@ -54,6 +54,7 @@ def url_to_tensor(image_url):
 
 # function that takes in job_id and checks if it is completed every 2s
 # times out after max_time
+# returns the result url if completed
 def checkJob(job_id):
     print("beginning of check job function")
     start_time = time.time()
@@ -95,3 +96,20 @@ def upload_to_krea(image):
     response = requests.post(url, data=payload, files=files, headers=headers)
 
     return response.json()["image_url"]
+
+def upload_img_arr_krea(image_arr):
+    img_url_arr = []
+
+    for img in image_arr:
+        if img != None:
+            img_url = upload_to_krea(img)
+            img_url_arr.append(img_url)
+    
+    return img_url_arr
+
+def sendJob(url, payload, headers):
+        response = requests.post(url, json=payload, headers=headers)
+        print(response.text)
+        data = response.json()
+        job_id = data["job_id"]
+        return checkJob(job_id)

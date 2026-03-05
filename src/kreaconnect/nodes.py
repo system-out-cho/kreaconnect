@@ -111,59 +111,79 @@ class Example:
     #    return ""
 
 #Krea Node 
-class KreaNode: 
+class SeedDream4: 
     CATEGORY = "Krea Node"
     @classmethod
     def INPUT_TYPES(s):
-        return { "required":  { "prompt": ("STRING",{
-            "multiline": True,
-            "default": "Your prompt here."
-        }), }, 
-            "optional": {"image_1": ("IMAGE",), "image_2": ("IMAGE",), "image_3": ("IMAGE", )} }
+        return { 
+            "required": {
+                "width": ("INT", {
+                    "default": 848,
+                    "min": 0,
+                    "max": 4096,
+                    "display": "number"
+                }),
+                "height": ("INT", {
+                    "default": 428,
+                    "min": 0,
+                    "max": 4096,
+                    "display": "number"
+                }),
+            }, 
+            "optional": {
+                "image_1": ("IMAGE",), 
+                "image_2": ("IMAGE",), 
+                "image_3": ("IMAGE",),
+                "image_strengths": ("STRING", {
+                    "multiline": False,
+                    "default": "1, 1, 1"
+                }),
+                "prompt": ("STRING",{
+                    "multiline": True,
+                    "default": "An image of a person."
+                }), 
+            } 
+        }
     RETURN_TYPES = ("IMAGE",)
     FUNCTION = "run"
     # OUTPUT_NODE = True
     
-    def requestModel(self, prompt, img_url_arr):
+    def requestModel(self, width, height, image_strengths_arr, prompt, img_url_arr):
+
         styleImages = []
-        for img_url in img_url_arr:
-            obj = {"strength": 1, "url": img_url}
+        for i in range(len(img_url_arr)):
+            obj = {"strength": image_strengths_arr[i], "url": img_url_arr[i]}
             styleImages.append(obj)
 
         url = "https://api.krea.ai/generate/image/bytedance/seedream-4"
         payload = {
             "prompt": prompt,
             "styleImages": styleImages,
-            "width": 828,
-            "height": 428
+            "width": width,
+            "height": height
         }
         headers = {
             "Authorization": "Bearer " + self.api_key,
             "Content-Type": "application/json"
         }
-        print("SENDING REQUEST")
-        response = requests.post(url, json=payload, headers=headers)
-        print(response.text)
-        print("STORING REQUEST")
-        data = response.json()
-        print("PARSING REQUEST")
-        job_id = data["job_id"]
-        print("PRINTING JOB_ID from requestNano")
-        print(job_id)
-        self.result_url = utils.checkJob(job_id)
 
-    def run(self, prompt, image_1=None, image_2=None, image_3=None):
+        self.result_url = utils.sendJob(url, payload, headers)
+
+    def run(self, width, height, image_strengths, prompt, image_1=None, image_2=None, image_3=None):
 
         self.api_key = utils.setKey()
-        image_arr = [image_1, image_2, image_3]
-        img_url_arr = []
 
-        for img in image_arr:
-            if img != None:
-                img_url = utils.upload_to_krea(img)
-                img_url_arr.append(img_url)
+        image_strengths_arr = []
+        if image_strengths:
+            image_strengths_arr = [float(x) for x in image_strengths.split(',')]
+
+        image_arr = [image_1, image_2, image_3]
+        img_url_arr = utils.upload_img_arr_krea(image_arr)
         
-        self.requestModel(prompt, img_url_arr)
+        if (len(image_strengths_arr) != len(img_url_arr)):
+            raise Exception("Length of image strengths does not match number of input images")
+        
+        self.requestModel(width, height, image_strengths_arr, prompt, img_url_arr)
 
         img_tensor = utils.url_to_tensor(self.result_url)
 
@@ -175,18 +195,16 @@ class KreaNode:
 # NOTE: names should be globally unique
 NODE_CLASS_MAPPINGS = {
     "Example": Example,
-    "Krea Node": KreaNode,
+    "Seed Dream 4": SeedDream4,
 }
 
 # A dictionary that contains the friendly/humanly readable titles for the nodes
 NODE_DISPLAY_NAME_MAPPINGS = {
     "Example": "Example Node",
-    "Krea Node": "Krea Node",
+    "Seed Dream 4": "Seed Dream 4",
 
 }
 
 #stuff to fix:
-# - optional prompt 
-# - multiple images 
 # - multiple models 
 # - 4 + image inputs dynamically created
