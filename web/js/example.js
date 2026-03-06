@@ -20,7 +20,7 @@ app.registerExtension({
                 const r = onDrawForeground ? onDrawForeground.apply(this, arguments) : undefined;
                 
                 // Set the style for your credit flag
-                ctx.fillStyle = "#444444"; // Yellow background
+                ctx.fillStyle = "#937e3c"; // Yellow background
                 ctx.beginPath();
                 ctx.roundRect(this.size[0] - 70, -25, 65, 18, 5); // Position it top-right
                 ctx.fill();
@@ -30,7 +30,7 @@ app.registerExtension({
                 ctx.fillText(`⚡${value} CU`, this.size[0] - 60, - 12);
                 
                 return r;
-        }
+            }
         }
     }
 });
