@@ -6,11 +6,15 @@ import time
 import numpy as np
 from PIL import Image
 import io
+from dotenv import load_dotenv
 
 api_key = ""
 
 # max_time for generation to run before time out
 max_time = 60
+
+# load dotenv
+load_dotenv()
 
 # function that sets the API key from env
 def setKey():
