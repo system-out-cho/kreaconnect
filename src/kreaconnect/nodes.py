@@ -1,5 +1,4 @@
 from inspect import cleandoc
-import requests
 
 from . import utils
 
@@ -182,6 +181,100 @@ class GPTImage:
 
         return (img_tensor,)
 
+class ZImage: 
+    CATEGORY = "Krea Node"
+    @classmethod
+    def INPUT_TYPES(s):
+        return { 
+            "required": {
+                "width": ("INT", {
+                    "default": 1024,
+                    "min": 512,
+                    "max": 4096,
+                    "display": "number"
+                }),
+                "height": ("INT", {
+                    "default": 1024,
+                    "min": 512,
+                    "max": 4096,
+                    "display": "number"
+                }),
+                "denoising_strength": ("FLOAT", {
+                    "default": 1,
+                    "min": 0.1,
+                    "max": 1,
+                    "display": "number"
+                }),
+                "seed": ("INT", {
+                    "default": 3123109231380,
+                }),
+                "style_image_strengths": ("STRING", {
+                    "multiline": False,
+                    "default": "1, 1, 1"
+                }),
+            }, 
+            "optional": {
+                "ref_image": ("IMAGE",), 
+                "style_image_1": ("IMAGE",),
+                "style_image_2": ("IMAGE",), 
+                "style_image_3": ("IMAGE",),
+                "prompt": ("STRING",{
+                    "multiline": True,
+                    "default": "An image of a person."
+                }), 
+            } 
+        }
+    RETURN_TYPES = ("IMAGE",)
+    FUNCTION = "run"
+    # OUTPUT_NODE = True
+    
+    def requestModel(self, width, height, denoising_strength, seed, styleImages, prompt, ref_Image):
+
+        url = "https://api.krea.ai/generate/image/openai/gpt-image"
+        payload = {
+            "prompt": prompt,
+            "styleImages": styleImages,
+            "width": width,
+            "height": height,
+            "seed": seed,
+            "denoising_strength": denoising_strength,
+            "imageUrl": ref_Image,
+        }
+        headers = {
+            "Authorization": "Bearer " + self.api_key,
+            "Content-Type": "application/json"
+        }
+
+        self.result_url = utils.sendJob(url, payload, headers)
+
+    def run(self, width, height, denoising_strength, seed, style_image_strengths, prompt, style_image_1=None, style_image_2=None, style_image_3=None, ref_image=None):
+
+        self.api_key = utils.setKey()
+
+        image_arr = [style_image_1, style_image_2, style_image_3]
+        img_url_arr = utils.upload_img_arr_krea(image_arr)
+
+        ref_img_url = utils.upload_to_krea(ref_image)
+
+        image_strengths_arr = []
+        if style_image_strengths:
+            image_strengths_arr = [float(x) for x in style_image_strengths.split(',')]
+
+        if (len(image_strengths_arr) != len(img_url_arr)):
+            raise Exception("Length of image strengths does not match number of input images")
+        
+        styleImages = []
+        for i in range(len(img_url_arr)):
+            obj = {"strength": image_strengths_arr[i], "url": img_url_arr[i]}
+            styleImages.append(obj)
+        
+        print(type(ref_img_url))
+        print(ref_img_url)
+        self.requestModel(width, height, denoising_strength, seed, styleImages, prompt, ref_img_url)
+
+        img_tensor = utils.url_to_tensor(self.result_url)
+
+        return (img_tensor,)
 
 
 # A dictionary that contains all nodes you want to export with their names
@@ -189,15 +282,16 @@ class GPTImage:
 NODE_CLASS_MAPPINGS = {
     "Example": Example,
     "GPT Image": GPTImage,
+    "Z Image": ZImage,
 }
 
 # A dictionary that contains the friendly/humanly readable titles for the nodes
 NODE_DISPLAY_NAME_MAPPINGS = {
     "Example": "Example Node",
     "GPT Image": "GPT Image",
+    "Z Image": "Z Image",
 
 }
 
 #stuff to fix:
-# - multiple models 
 # - 4 + image inputs dynamically created

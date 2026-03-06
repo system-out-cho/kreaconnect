@@ -11,7 +11,7 @@ from dotenv import load_dotenv
 api_key = ""
 
 # max_time for generation to run before time out
-max_time = 60
+max_time = 120
 
 # load dotenv
 load_dotenv()
