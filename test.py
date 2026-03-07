@@ -1,5 +1,6 @@
 import os
 from dotenv import load_dotenv
+import requests
 
 load_dotenv()
 
@@ -12,3 +13,14 @@ if api_key is None:
 else:
     print("KREA API key loaded successfully")
     print(api_key)
+
+def sendRequest():
+    # url = "https://api.krea.ai/jobs?limit=100&status=queued"
+    url = "https://api.krea.ai/jobs?limit=100"
+    headers = {"Authorization": "Bearer " + api_key}
+    response = requests.get(url, headers=headers)
+    print("PRINTING response.text from sendrequest!!!")
+    print(len(response.json()["items"]))
+    # print(response.text)
+
+sendRequest()
