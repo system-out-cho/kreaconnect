@@ -20,7 +20,8 @@ def sendRequest():
     headers = {"Authorization": "Bearer " + api_key}
     response = requests.get(url, headers=headers)
     print("PRINTING response.text from sendrequest!!!")
-    print(len(response.json()["items"]))
+    json_obj = response.json()
+    print(json_obj["items"])
     # print(response.text)
 
 sendRequest()
